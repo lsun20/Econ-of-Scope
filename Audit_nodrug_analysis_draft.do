@@ -29,15 +29,26 @@ set more off
 capture log close
 set maxvar  30000
 
-*Xuehao
-global datadir "/Users/apple/Dropbox (REAP)/Standardized_Patients_II/Std_Patient_2/Papers/4_Audit_Exp_EconofScale/Data"
-global output "/Users/apple/Dropbox (REAP)/Standardized_Patients_II/Std_Patient_2/Papers/4_Audit_Exp_EconofScale/Output"
+*Sophie
+global datadir "/Users/lsun20/Dropbox (MIT)/Econ of Scope_Sophie/Data"
+global output "/Users/lsun20/Dropbox (MIT)/Econ of Scope_Sophie/Output"
 
 	
 
 use "$datadir/nodrug_paper.dta", clear
 	
+	/*-------
+		Step 1: Table 1-1: Sample Distribution of Observations (Clinics) by Experimental Arm and by disease
+	--------*/	
+	foreach clinic of varlist THC VC MVC {
+	display "disease distribution by `clinic'"
+		tab disease if nodrug_a == 0 & nodrug_b == 0 & `clinic' == 1
+		tab disease if nodrug_a == 1 & nodrug_b == 0 & `clinic' == 1
+		tab disease if nodrug_a == 0 & nodrug_b == 1 & `clinic' == 1
+		
+	}
 
+		
 /*-------
 Step 3: Regression
 --------*/		
@@ -48,152 +59,61 @@ Step 3: Regression
 	replace nodrug_a=0 if nodrug_a==.
 	replace nodrug_b=0 if nodrug_b==.
 	
-	global doccha "pracdoc age male patientload"
+	eststo clear
+	foreach out of varlist diagtime_min diagtime arq arqe {
+		eststo: areg `out' nodrug_b nodrug_a angina age pracdoc  i.MFgrouptype if THC==1, absorb(towncode) vce(robust)
+			test nodrug_b=nodrug_a
+			estadd scalar pval = `r(p)'
+			
+			su `out' if VC==0 & nodrug_a==0 & nodrug_b==0
+			estadd scalar mean = `r(mean)'
+	
+		eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  i.MFgrouptype if VC==1 ,  vce(robust)
+			
+			su `out' if VC==1 & nodrug_b==0
+			estadd scalar mean = `r(mean)'
+			
+		eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  if MVC==1 ,  vce(robust)
+			
+			su `out' if MVC==1 & nodrug_b==0
+			estadd scalar mean = `r(mean)'
+	}
+
+	esttab using "$output/nodrug_process.csv", b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
+			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc) scalar(pval mean) replace addnote("Samples are THC; VC; MVC")
 	
 
-	eststo clear
-	qui foreach out of varlist diagtime_min diagtime arq arqe {
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1 & drugpres==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode if drugpres==1, absorb(groupcode) vce(robust)
-	}
-
-	esttab using "$output/nodrug_test.csv", b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) replace 
-	
-	eststo clear
-	qui foreach out of varlist gavediag corrdiag wrongdiag {
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1 & drugpres==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode if drugpres==1, absorb(groupcode) vce(robust)
-	}
-
-	esttab using "$output/nodrug_test.csv", b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) append 
-
-
-	eststo clear
-	qui foreach out of varlist corrtreat pcorrtreat partcorrtreat referral corrdrug pcorrdrug ///
-	drugpres numofdrug antibiotic numedl numnonedl numedlprov numnonprovedl nonedldrug harmful uselessdrug {
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1 & drugpres==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode if drugpres==1, absorb(groupcode) vce(robust)
-	}
-
-	esttab using "$output/nodrug_test.csv", b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) append 
-			
-			
-			eststo clear
-	qui foreach out of varlist diagtime_min diagtime arq arqe {
-		eststo: reg 	`out' nodrug_b nodrug_a angina  		if THC==1, 					vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina  		if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1 & drugpres==1, absorb(towncode) vce(robust)
-
-		eststo: reg		`out' nodrug_b nodrug_a angina tuberc THC MVC	 					 , 					 vce(robust)
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , 					 vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode if drugpres==1, absorb(groupcode) vce(robust)
-	}
-
-	esttab using "$output/nodrug_test.csv", b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) replace 
 			
 	/*-------
-	Step 2.3: Table 3 Nodrug and diagnosis
+	Step 2.3: Table 3 Nodrug and diagnosis and treatment
 	--------*/	
 
 	eststo clear
 
-	qui foreach out of varlist gavediag corrdiag wrongdiag  {
-		eststo: reg 	`out' nodrug_b nodrug_a angina  		if THC==1, 					vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina  		if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
-
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, 					 vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if VC==1, absorb(groupcode) vce(robust)
-
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, 				  vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if MVC==1, absorb(groupcode) vce(robust)
-
-
-		eststo: reg		`out' nodrug_b nodrug_a angina tuberc THC MVC	 					 , 					 vce(robust)
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , 					 vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
-	}
-
-	esttab using nodrug_diag.csv, b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) replace
-
-	/*-------
-	Step 2.4: Table 4 Nodrug and Treatment
-	--------*/	
+	foreach out of varlist corrdiag pcorrdiag corrtreat corrdrug referral {
+		eststo: areg `out' nodrug_b nodrug_a angina age pracdoc  i.MFgrouptype if THC==1, absorb(towncode) vce(robust)
+			test nodrug_b=nodrug_a
+			estadd scalar pval = `r(p)'
+			
+			su `out' if VC==0 & nodrug_a==0 & nodrug_b==0
+			estadd scalar mean = `r(mean)'
 	
-	set matsize 10000
-	eststo clear
-	qui foreach out of varlist  corrtreat pcorrtreat partcorrtreat referral corrdrug pcorrdrug ///
-	drugpres numofdrug antibiotic numedl numnonedl numedlprov numnonprovedl nonedldrug harmful uselessdrug  {
-		eststo: reg 	`out' nodrug_b nodrug_a angina  		if THC==1, 					vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina  		if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
-
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, 					 vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if VC==1, absorb(groupcode) vce(robust)
-
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, 				  vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if MVC==1, absorb(groupcode) vce(robust)
-
-
-		eststo: reg		`out' nodrug_b nodrug_a angina tuberc THC MVC	 					 , 					 vce(robust)
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , 					 vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
+		eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  i.MFgrouptype if VC==1 ,  vce(robust)
+			
+			su `out' if VC==1 & nodrug_b==0
+			estadd scalar mean = `r(mean)'
+			
+		eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  if MVC==1 ,  vce(robust)
+			
+			su `out' if MVC==1 & nodrug_b==0
+			estadd scalar mean = `r(mean)'
 	}
 
-	esttab using nodrug_treat.csv, b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) replace
+	esttab using "$output/nodrug_diagnosis_treatment.csv", b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
+			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc) scalar(pval mean) replace addnote("Samples are THC; VC; MVC")
 
-
-	preserve 
-		replace nodrug_a=0 if nodrug==0 & nodrug_a==1
-		
-		set matsize 10000
-		eststo clear
-		qui foreach out of varlist  corrtreat pcorrtreat partcorrtreat referral corrdrug pcorrdrug ///
-		drugpres numofdrug antibiotic {
-			eststo: reg 	`out' nodrug_b nodrug_a angina  		if THC==1, 					vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina  		if THC==1, absorb(towncode) vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
-
-			eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, 					 vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, absorb(groupcode) vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if VC==1, absorb(groupcode) vce(robust)
-
-			eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, 				  vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, absorb(groupcode) vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if MVC==1, absorb(groupcode) vce(robust)
-
-
-			eststo: reg		`out' nodrug_b nodrug_a angina tuberc THC MVC	 					 , 					 vce(robust)
-			eststo: reg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , 					 vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , absorb(groupcode) vce(robust)
-			eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
-		}
-
-		esttab using nodrug_treat_new.csv, b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-				ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) replace
-	restore
-
+	
+	
 	
 	/*-------
 	Step 2.4: Table 5 Nodrug and Fees
@@ -211,85 +131,48 @@ thc_d_v_Q4_8 thc_d_v_Q4_9 thc_a_v_Q4_8 thc_a_v_Q4_8
 
 	replace drugfee=totfee if drugfee==. & totfee!=.
 
-	eststo clear
-	qui foreach out of varlist totfee drugfee {
-		eststo: reg 	`out' nodrug_b nodrug_a angina  		if THC==1, 					vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina  		if THC==1, absorb(towncode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina $doccha 	if THC==1, absorb(towncode) vce(robust)
 
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, 					 vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if VC==1, absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if VC==1, absorb(groupcode) vce(robust)
+	/*-------
+	Step 2.5: Table 2 Effects on drug prescriptions (THC, VC, MVC)
+- drugfee
+- number of drugs; cost of drugs; number of unnecessary drugs; 
+- number on EDL/zero-profit drug; number off EDL/zero-profit drug; 
+- whether Wester/Chinese modern/Chinese traditional medicines are prescribed.
+	--------*/	
 
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, 				  vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc 			i.countycode if MVC==1, absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc $doccha 	i.countycode if MVC==1, absorb(groupcode) vce(robust)
+gen chinese_modern = 0
+label var chinese_modern "Whether Chinese modern medicines are prescribed"
+foreach var of varlist thc_*_v_Q9_10 vc_*_v_Q9_10 {
+	replace chinese_modern = 1 if `var' == 1
+}
 
-
-		eststo: reg		`out' nodrug_b nodrug_a angina tuberc THC MVC	 					 , 					 vce(robust)
-		eststo: reg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , 					 vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC 			i.countycode , absorb(groupcode) vce(robust)
-		eststo: areg 	`out' nodrug_b nodrug_a angina tuberc THC MVC $doccha 	i.countycode , absorb(groupcode) vce(robust)
-	}
-
-	esttab using nodrug_fee.csv, b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-			ar2(2) keep(nodrug_b nodrug_a pracdoc angina tuberc THC MVC) replace
-	
-Stop
+gen chinese_trad = 0
+label var chinese_trad 	"Whether Chinese traditional medicines are prescribed"
+foreach var of varlist thc_*_v_Q9_9 vc_*_v_Q9_9 {
+	replace chinese_trad = 1 if `var' == 1
+}
 
 eststo clear
-foreach out of varlist diagtime_min theta_mle arqe corrtreat pcorrtreat referral drugpres numofdrug harmful uselessdrug antibiotic numedl numnonedl nonedldrug {	
-	eststo: areg `out' nodrug_b nodrug_a angina if VC==0, absorb(towncode) vce(robust)
+foreach out of varlist numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad {	
+	
+	eststo: areg `out' nodrug_b nodrug_a angina age pracdoc  i.MFgrouptype if THC==1, absorb(towncode) vce(robust)
 			test nodrug_b=nodrug_a
 			estadd scalar pval = `r(p)'
 			
 			su `out' if VC==0 & nodrug_a==0 & nodrug_b==0
 			estadd scalar mean = `r(mean)'
 	
-	eststo: reg `out' nodrug_b  angina tuberc i.countycode if VC==1,  vce(robust)
+	eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  i.MFgrouptype if VC==1 ,  vce(robust)
 			
 			su `out' if VC==1 & nodrug_b==0
 			estadd scalar mean = `r(mean)'
-}
-esttab using nodrug_forprez.csv, b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-		ar2(2) keep(nodrug_b nodrug_a ) scalar(pval mean) replace
 			
-eststo clear
-foreach out of varlist diagtime_min theta_mle arqe corrtreat pcorrtreat referral drugpres numofdrug harmful uselessdrug antibiotic numedl numnonedl nonedldrug {	
-	eststo: areg `out' nodrug_b nodrug_a angina if VC==0 & disease!="D", absorb(countycode) vce(robust)
-			test nodrug_b=nodrug_a
-			estadd scalar pval = `r(p)'
+	eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  if MVC==1 ,  vce(robust)
 			
-			su `out' if VC==0 & nodrug_a==0 & nodrug_b==0
-			estadd scalar mean = `r(mean)'
-	
-	eststo: reg `out' nodrug_b  angina tuberc i.countycode if VC==1 & disease!="D",  vce(robust)
-			
-			su `out' if VC==1 & nodrug_b==0
+			su `out' if MVC==1 & nodrug_b==0
 			estadd scalar mean = `r(mean)'
 }
-esttab using nodrug_forprez_nodiar.csv, b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-		ar2(2) keep(nodrug_b nodrug_a ) scalar(pval mean) replace
-			
-			
-eststo clear
-foreach out of varlist diagtime_min theta_mle arqe corrtreat pcorrtreat referral drugpres numofdrug harmful uselessdrug antibiotic numedl numnonedl nonedldrug {	
-	
-	eststo: areg `out' nodrug_b nodrug_a angina age pracdoc  i.MFgrouptype if VC==0, absorb(towncode) vce(robust)
-			test nodrug_b=nodrug_a
-			estadd scalar pval = `r(p)'
-			
-			su `out' if VC==0 & nodrug_a==0 & nodrug_b==0
-			estadd scalar mean = `r(mean)'
-	
-	eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  i.MFgrouptype if VC==1,  vce(robust)
-			
-			su `out' if VC==1 & nodrug_b==0
-			estadd scalar mean = `r(mean)'
-}
-esttab using nodrug_forprez_cont.csv, b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-		ar2(2) keep(nodrug_b nodrug_a ) scalar(pval mean) replace
-			
-			
 
-		
+esttab using "$output/nodrug_pres.csv",  b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
+		ar2(2) keep(nodrug_b nodrug_a ) scalar(pval mean) replace addnote("Samples are THC; VC; MVC")
+

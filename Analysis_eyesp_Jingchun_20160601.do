@@ -1,18 +1,22 @@
 /****************************************
 Eye SP: Baseline paper
 Auother: Jingchun
-Last version: 20160601
+Last version: 20170717
 
 **************************************/
+/* in case of encoding errors
+unicode encoding set gb18030
+unicode translate "eyesp_clean_full.dta", invalid(ignore)
+*/
 
 clear
 set more off
 
-cd "C:\Users\nie\Desktop\no_sale"
+cd "/Users/lsun20/Dropbox (MIT)/Econ of Scope_Sophie/"
 
 
 **Import the data
-use  eyesp_clean_full.dta,clear
+use  "./Data/eyesp_clean_full.dta",clear
 
 
 *************Prepare the variables*******************
@@ -62,7 +66,7 @@ gen ownshop_order=ownshop
   clonevar city_big=citysize
   recode city_big (2=0) (3=0) (4=0)
   
-  gen highincome=(per_capita>28844)   //¸ßÓÚÈ«¹úÆ½¾ù
+  gen highincome=(per_capita>28844)   //é«˜äºå…¨å›½å¹³å‡
   
   
   
@@ -90,11 +94,11 @@ gen ownshop_order=ownshop
 
 clonevar un_screen=esp_11
     recode un_screen (2=0) (.=0)
-    label var un_screen  "ÊÇ·ñ¼ì²éÂãÑÛÊÓÁ¦"
+    label var un_screen  "æ˜¯å¦æ£€æŸ¥è£¸çœ¼è§†åŠ›"
  
 clonevar cr_screen=esp_10
     recode cr_screen (2=0)  (3=0)
-    label var cr_screen "ÊÇ·ñÓÃE±í¼ì²é´÷¾µÊÓÁ¦"
+    label var cr_screen "æ˜¯å¦ç”¨Eè¡¨æ£€æŸ¥æˆ´é•œè§†åŠ›"
    
 gen e_chart=(un_screen==1|cr_screen==1)
     label var e_chart "Check vision using E-chart?"
@@ -148,8 +152,8 @@ clonevar ex_regular=esp_29
 clonevar ex_300=esp_30
 clonevar ex_cheast=esp_33
 
-**±£ĞŞÆÚ
-**¾µ¼ÜÊÇ·ñÓĞ±£ĞŞ
+**ä¿ä¿®æœŸ
+**é•œæ¶æ˜¯å¦æœ‰ä¿ä¿®
   clonevar warranty1=esp_31
 	         replace warranty1=0 if warranty1==0
 			 replace warranty1=1 if warranty1!=0&warranty1!=.n
@@ -166,7 +170,7 @@ clonevar ex_cheast=esp_33
    gen vdd_unc_left=abs(esp_12b-6/zoc_ec_left)
    
    
-*1.1. Í«¾à
+*1.1. ç³è·
     gen esp_ph=esp_14_1  
 	    replace esp_ph=esp_19 if (esp_14_1==.|esp_14_1==.n)&esp_19!=.&esp_19!=.n
 		
@@ -192,7 +196,7 @@ clonevar ex_cheast=esp_33
 	 gen j45_left_auto_2=-(zoc_ar_cyl_left/2)*sin(2*zoc_ar_ax_left*_pi/180)
 	  
 	 	 
-	 **×Ô¶¯Ñé¹â¼ì²é½á¹û¶Ô±È
+	 **è‡ªåŠ¨éªŒå…‰æ£€æŸ¥ç»“æœå¯¹æ¯”
 	 
 	 gen vdd_right_auto=sqrt(2)*sqrt((se_right_auto_1-se_right_auto_2)^2+(j0_right_auto_1-j0_right_auto_2)^2+ ///
 	 (j45_right_auto_1-j45_right_auto_2)^2)
@@ -235,7 +239,7 @@ clonevar ex_cheast=esp_33
 	 	 
 	 
 	 
-	 **ZOC ²åÆ¬½á¹û
+	 **ZOC æ’ç‰‡ç»“æœ
 	 gen se_right_sub_2=zoc_mr_sph_right+zoc_mr_cyl_right/2
 	 gen j0_right_sub_2=-(zoc_mr_cyl_right/2)*cos(2*zoc_mr_ax_right*_pi/180)
 	 gen j45_right_sub_2=-(zoc_mr_cyl_right/2)*sin(2*zoc_mr_ax_right*_pi/180)
@@ -244,7 +248,7 @@ clonevar ex_cheast=esp_33
 	 gen j45_left_sub_2=-(zoc_mr_cyl_left/2)*sin(2*zoc_mr_ax_left*_pi/180)
 	 
 	 
-	 **ZOC final prescription ×îÖÕ´¦·½£¨Ô¶ÓÃ£©
+	 **ZOC final prescription æœ€ç»ˆå¤„æ–¹ï¼ˆè¿œç”¨ï¼‰
 	 gen se_right_final_2=zoc_final_sph_right+zoc_final_cyl_right/2
 	 gen se_left_final_2=zoc_final_sph_left+zoc_final_cyl_left/2
 	 gen j0_right_final_2=-(zoc_final_cyl_right/2)*cos(2*zoc_final_ax_right*_pi/180)
@@ -254,7 +258,7 @@ clonevar ex_cheast=esp_33
 	 
 	 
 	 
-	 **ÓÒ¡¢×óÑÛ²åÆ¬Ñé¹âÓëZOCµÄ²îÒì
+	 **å³ã€å·¦çœ¼æ’ç‰‡éªŒå…‰ä¸ZOCçš„å·®å¼‚
 	 gen vdd_right_sub=sqrt(2)*sqrt((se_right_sub_1-se_right_sub_2)^2+(j0_right_sub_1-j0_right_sub_2)^2+ ///
 	 (j45_right_sub_1-j45_right_sub_2)^2) 
 	 
@@ -278,7 +282,7 @@ clonevar ex_cheast=esp_33
 	 
 	 
 	 
-	 **ÓÒ¡¢×óÑÛ²åÆ¬Ñé¹âÓëZOC´¦·½µÄ²îÒì
+	 **å³ã€å·¦çœ¼æ’ç‰‡éªŒå…‰ä¸ZOCå¤„æ–¹çš„å·®å¼‚
 	  gen vdd_right_final=sqrt(2)*sqrt((se_right_sub_1-se_right_final_2)^2+(j0_right_sub_1-j0_right_final_2)^2+ ///
 	 (j45_right_sub_1-j45_right_final_2)^2) 
 	 
@@ -315,13 +319,13 @@ clonevar ex_cheast=esp_33
 	 gen j45_left_gl_1=-(gl_left_cyl/2)*sin(2*gl_left_ax*_pi/180)
 	 
 	  
-	 **Ñ§Éú´÷µÄÑÛ¾µÓëÑÛ¾µ¼ì²é½á¹ûµÄ¶Ô±È
+	 **å­¦ç”Ÿæˆ´çš„çœ¼é•œä¸çœ¼é•œæ£€æŸ¥ç»“æœçš„å¯¹æ¯”
 	 foreach var in right left {    //make sure which glasses the students wear that days
 	 foreach num in sph cyl ax {
 	 gen zoc_gl_`num'_`var'=.
 	     replace zoc_gl_`num'_`var'=zoc_in_`num'_`var' if inlist(treatment,11,12,21,22,24)!=0
 		 replace zoc_gl_`num'_`var'=zoc_final_`num'_`var' if treatment==23
-		 label var zoc_gl_`num'_`var' "SP´÷µÄÑÛ¾µ£º`var':`num'"
+		 label var zoc_gl_`num'_`var' "SPæˆ´çš„çœ¼é•œï¼š`var':`num'"
 		 }
 		 }
 	
@@ -335,7 +339,7 @@ clonevar ex_cheast=esp_33
 	 
      	
 	 
-	 **ÑÛ¾µ¼ì²é½á¹ûÓëÑ§ÉúËù´÷ÑÛ¾µµÄ²îÒì
+	 **çœ¼é•œæ£€æŸ¥ç»“æœä¸å­¦ç”Ÿæ‰€æˆ´çœ¼é•œçš„å·®å¼‚
 	 gen vdd_right_gl=sqrt(2)*sqrt((se_right_gl_1-se_right_gl_2)^2+(j0_right_gl_1-j0_right_gl_2)^2+ ///
 	 (j45_right_gl_1-j45_right_gl_2)^2) 
 	 
@@ -377,7 +381,7 @@ clonevar ex_cheast=esp_33
     gen j45_left_ma_1=-(ma_left_cyl/2)*sin(2*ma_left_ax*_pi/180)
 	
 	
-	**¶ÔZOCÕıÈ·´¦·½¶Ô±È
+	**å¯¹ZOCæ­£ç¡®å¤„æ–¹å¯¹æ¯”
 	gen vdd_right_ma_z=sqrt(2)*sqrt((se_right_ma_1-se_right_final_2)^2+(j0_right_ma_1-j0_right_final_2)^2+ ///
 	 (j45_right_ma_1-j45_right_final_2)^2) 
 	 
@@ -407,7 +411,7 @@ clonevar ex_cheast=esp_33
 	
 	
 	
-	**ÓëÑÛ¾µµê×Ô¼ºµÄ½á¹û×÷¶Ô±È
+	**ä¸çœ¼é•œåº—è‡ªå·±çš„ç»“æœä½œå¯¹æ¯”
 	gen vdd_right_ma_l=sqrt(2)*sqrt((se_right_ma_1-se_right_sub_1)^2+(j0_right_ma_1-j0_right_sub_1)^2+ ///
 	 (j45_right_ma_1-j45_right_sub_1)^2) 
 	 
@@ -484,7 +488,7 @@ clonevar ex_cheast=esp_33
 *******Select the sample***********************
 
 *keep if hometown==1
-*keep if province=="ÉÂÎ÷Ê¡"
+*keep if province=="é™•è¥¿çœ"
 *keep if (treatment==11|treatment==21)
 keep if treatment==11|treatment==12|treatment==21|treatment==22
 
@@ -495,11 +499,44 @@ stop
  
 **For Sean:
 
+
+**Effect on eyeglass sales
+clonevar require_glasses = esp_37
+recode require_glasses (2=0)
+label var require_glasses "1/0;1=recommends buying glasses after exam"
+
+destring ex_regular, replace force
+label var ex_medicine 	"prescription fee"
+label var ex_screen 	"exam fee"
+label var ex_total 		"total fee excluding glasses"
+label var ex_regular 	"price of first pair when asked for regularly priced glasses"
+label var ex_300 		"price of first pair when asked for glasses priced around 300"
+label var ex_cheast 	"price of cheapest pair if purchased"
+
+foreach var of varlist ex_* {
+	replace `var' = log(`var'+1)
+}
+global sales ex_medicine ex_screen ex_total ex_regular ex_300
+
+eststo clear
+foreach var of varlist $sales {
+dis "`var'"
+quietly eststo:reg `var' nosale  i.enumeratorid 
+}
+
+foreach var of varlist $sales {
+eststo:reg `var' nosale public nosale_pu i.enumeratorid 
+}
+
+foreach var of varlist $sales {
+eststo:reg `var' nosale public nosale_pu i.enumeratorid male_check age_check 
+}
+
+esttab using "./Output/nosale_price.csv",replace star(* 0.10 ** 0.05 *** 0.01) label b(3) se(3)  drop(*.enumeratorid) obs r2
+
+
 **Effect on process
-
-global process_q e_chart gl_screen dialate sc_other ph_d auto_screen ob_screen 
-
-
+global process_q e_chart gl_screen dialate sc_other ph_d auto_screen ob_screen
 
 set more off
 eststo clear
@@ -516,7 +553,7 @@ eststo:reg `var' nosale public nosale_pu i.enumeratorid male_check age_check if 
 }
 
 foreach var of varlist $process_q {
-eststo:reg `var' nosale public nosale_pu i.enumeratorid male_check age_check if province=="ÉÂÎ÷Ê¡"
+eststo:reg `var' nosale public nosale_pu i.enumeratorid male_check age_check if province=="é™•è¥¿çœ"
 }
 esttab using nosale.csv,replace star(* 0.10 ** 0.05 *** 0.01) label b(3) se(3)  drop(*.enumeratorid) noobs r2
 
@@ -545,7 +582,7 @@ eststo: reg `var' nosale public nosale_pu male_check age_check  i.enumeratorid i
 }
 
 foreach var of varlist $outcome {
-eststo: reg `var' nosale public nosale_pu male_check age_check  i.enumeratorid if province=="ÉÂÎ÷Ê¡"
+eststo: reg `var' nosale public nosale_pu male_check age_check  i.enumeratorid if province=="é™•è¥¿çœ"
 }
 
 esttab using ols_public.csv,replace star(* 0.10 ** 0.05 *** 0.01) label b(3) se(3)  drop(*.enumeratorid) noobs r2
@@ -596,6 +633,6 @@ eststo: reg `var' nosale public nosale_pu  male_check age_check  i.enumeratorid 
 
 
 foreach var of varlist $outcome {
-eststo: reg `var' nosale public nosale_pu  male_check age_check  i.enumeratorid if province=="ÉÂÎ÷Ê¡"
+eststo: reg `var' nosale public nosale_pu  male_check age_check  i.enumeratorid if province=="é™•è¥¿çœ"
 }
 esttab using mixed_ols_public.csv,replace star(* 0.10 ** 0.05 *** 0.01) label b(3) se(3)  drop(*.enumeratorid) noobs r2
