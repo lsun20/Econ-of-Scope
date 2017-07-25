@@ -37,13 +37,26 @@ drop _m
 
 save "$datadir/profit_ratings.dta", replace
 */
-putexcel set "$output/profit_ratings_agreement.xlsx", replace
+use "$datadir/profit_ratings.dta", clear
 global RATERS 未央宫个体诊所1 未央宫村卫生室1 未央宫村卫生室2 未央宫个体诊所2 未央宫社区服务站 彩石镇卫生院 彩石镇村卫生室1 彩石镇村卫生室2 彩石镇村卫生室3
 
+foreach rater of varlist $RATERS {
+
+	replace `rater' = . if `rater' == 888
+	sum `rater', det
+	local med = `r(p50)'
+	replace `rater' = 0 if `rater' <= `med'
+	replace `rater' = 1 if `rater' > `med' &  `rater' != .
+	//replace `rater' = 0 if `rater' <= 5
+	//replace `rater' = 1 if `rater' > 5 &  `rater' != .
+
+}
+
+putexcel set "$output/profit_ratings_agreement.xlsx", modify
 local counter = 3
 foreach rater1 of varlist $RATERS {
 local col = upper(substr("`c(alpha)'",`counter',1))
-local row = 2
+local row = 26
 	foreach rater2 of varlist $RATERS {
 		if "`rater1'" != "`rater2'" {
 			kap `rater1' `rater2'
@@ -59,3 +72,4 @@ local row = 2
 local counter = `counter'+2
 
 }
+
