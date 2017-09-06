@@ -162,17 +162,58 @@ foreach out of varlist numofdrug drugfee harmful uselessdrug numedl numnonedl ch
 			su `out' if VC==0 & nodrug_a==0 & nodrug_b==0
 			estadd scalar mean = `r(mean)'
 	
+	eststo: areg `out' nodrug_a angina age pracdoc  i.MFgrouptype if THC==1, absorb(towncode) vce(robust)
+			matrix result = r(table)
+			estadd scalar nodrug_pval_unadj = result[4,1] // 4th row for p-vals and 1st col for variable nodrug_a
+	eststo: areg `out' nodrug_b angina age pracdoc  i.MFgrouptype if THC==1, absorb(towncode) vce(robust)
+			matrix result = r(table)
+			estadd scalar nodrug_pval_unadj = result[4,1] // 4th row for p-vals and 1st col for variable nodrug_b	
+	
 	eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  i.MFgrouptype if VC==1 ,  vce(robust)
+			matrix result = r(table)
+			estadd scalar nodrug_pval_unadj = result[4,1] // 4th row for p-vals and 1st col for variable nodrug_b
 			
 			su `out' if VC==1 & nodrug_b==0
 			estadd scalar mean = `r(mean)'
 			
-	eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  if MVC==1 ,  vce(robust)
+	eststo: reg `out' nodrug_b  angina tuberc i.countycode age pracdoc  if MVC==1 ,  vce(robust) 
+			
+			matrix result = r(table)
+			estadd scalar nodrug_pval_unadj = result[4,1] // 4th row for p-vals and 1st col for variable nodrug_b
 			
 			su `out' if MVC==1 & nodrug_b==0
 			estadd scalar mean = `r(mean)'
 }
 
 esttab using "$output/nodrug_pres.csv",  b(%9.3fc) se(%9.3fc) starlevels( * 0.1 ** 0.05 *** 0.01) ///
-		ar2(2) keep(nodrug_b nodrug_a ) scalar(pval mean) replace addnote("Samples are THC; VC; MVC")
+		ar2(2) keep(nodrug_b nodrug_a ) scalar(pval mean nodrug_pval_unadj) replace addnote("Samples are THC; THC; THC; VC; MVC")
 
+// adjusting pvals
+rwolf numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad ///
+	if THC==1 , indepvar(nodrug_a) controls(angina age pracdoc  i.MFgrouptype ) vce(robust) seed(1) method(areg) abs(towncode)
+foreach out of varlist numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad {	
+	matrix nudrug_a_pval_adj_thc = nullmat(nudrug_a_pval_adj_thc), e(rw_`out')
+}	
+
+rwolf numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad ///
+	if THC==1 , indepvar(nodrug_b) controls(angina age pracdoc  i.MFgrouptype ) vce(robust) seed(1) method(areg) abs(towncode)
+foreach out of varlist numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad {	
+	matrix nudrug_b_pval_adj_thc = nullmat(nudrug_b_pval_adj_thc), e(rw_`out')
+}	
+
+rwolf numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad ///
+	if VC==1 , indepvar(nodrug_b) controls(angina tuberc i.countycode age pracdoc i.MFgrouptype) vce(robust) seed(1) 
+foreach out of varlist numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad {	
+	matrix nudrug_b_pval_adj_vc = nullmat(nudrug_b_pval_adj_vc), e(rw_`out')
+}
+
+rwolf numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad ///
+	if MVC==1 , indepvar(nodrug_b) controls(angina tuberc i.countycode age pracdoc) vce(robust) seed(1) 
+foreach out of varlist numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad {	
+	matrix nudrug_b_pval_adj_mvc = nullmat(nudrug_b_pval_adj_mvc), e(rw_`out')
+}
+
+matrix result = nudrug_a_pval_adj_thc \ nudrug_b_pval_adj_thc \ nudrug_b_pval_adj_vc \ nudrug_b_pval_adj_mvc
+matrix colnames result = numofdrug drugfee harmful uselessdrug numedl numnonedl chinese_modern chinese_trad
+putexcel set "${resultsdir}/nodrug_pres_pval_adj.xlsx", replace
+putexcel A1 = matrix(result), colnames
